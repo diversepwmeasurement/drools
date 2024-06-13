@@ -1,53 +1,53 @@
-name: Full downstream build
-
-on:
-  pull_request:
-    types: [labeled]
-    branches:
-      - main
-    paths-ignore:
-      - 'LICENSE'
-      - '**/.gitignore'
-      - '**.md'
-      - '**.adoc'
-      - '*.txt'
-      - 'docsimg/**'
-      - '.ci/jenkins/**'
-
 jobs:
   build-chain:
-    if: contains(github.event.pull_request.labels.*.name, 'run_fdb')
     concurrency:
-      group: fdb-drools_${{ matrix.os }}_${{ matrix.java-version }}_${{ matrix.maven-version }}_${{ github.head_ref }}
       cancel-in-progress: true
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        java-version: [17]
-        maven-version: ['3.9.6']
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
-    name: Build Chain (${{ matrix.os }} / Java-${{ matrix.java-version }} / Maven-${{ matrix.maven-version }})
+      group: fdb-drools_${{ matrix.os }}_${{ matrix.java-version }}_${{ matrix.maven-version
+        }}_${{ github.head_ref }}
+    if: contains(github.event.pull_request.labels.*.name, 'run_fdb')
+    name: Build Chain (${{ matrix.os }} / Java-${{ matrix.java-version }} / Maven-${{
+      matrix.maven-version }})
+    runs-on: self-hosted
     steps:
-      - name: Clean Disk Space
-        uses: kiegroup/kie-ci/.ci/actions/ubuntu-disk-space@main
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-      - name: Support long paths
-        if: ${{ matrix.os == 'windows-latest' }}
-        uses: kiegroup/kie-ci/.ci/actions/long-paths@main
-      - name: Java and Maven Setup
-        uses: kiegroup/kie-ci/.ci/actions/maven@main
-        with:
-          java-version: ${{ matrix.java-version }}
-          maven-version: ${{ matrix.maven-version }}
-          cache-key-prefix: ${{ runner.os }}-${{ matrix.java-version }}-maven${{ matrix.maven-version }}
-      - name: Build Chain
-        uses: kiegroup/kie-ci/.ci/actions/build-chain@main
-        with:
-          definition-file: https://raw.githubusercontent.com/${GROUP:kiegroup}/drools/${BRANCH:main}/.ci/buildchain-config.yaml
-          annotations-prefix: ${{ runner.os }}-${{ matrix.java-version }}/${{ matrix.maven-version }}
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
-          flow-type: full-downstream
-      - name: Surefire Report
-        uses: kiegroup/kie-ci/.ci/actions/surefire-report@main
-        if: ${{ always() }}
+    - continue-on-error: true
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      name: Clean Disk Space
+      uses: kiegroup/kie-ci/.ci/actions/ubuntu-disk-space@main
+    - continue-on-error: true
+      if: ${{ matrix.os == 'windows-latest' }}
+      name: Support long paths
+      uses: kiegroup/kie-ci/.ci/actions/long-paths@main
+    - continue-on-error: true
+      name: Java and Maven Setup
+      uses: kiegroup/kie-ci/.ci/actions/maven@main
+      with:
+        cache-key-prefix: ${{ runner.os }}-${{ matrix.java-version }}-maven${{ matrix.maven-version
+          }}
+        java-version: ${{ matrix.java-version }}
+        maven-version: ${{ matrix.maven-version }}
+    - continue-on-error: true
+      name: Build Chain
+      uses: kiegroup/kie-ci/.ci/actions/build-chain@main
+      with:
+        annotations-prefix: ${{ runner.os }}-${{ matrix.java-version }}/${{ matrix.maven-version
+          }}
+        definition-file: https://raw.githubusercontent.com/${GROUP:kiegroup}/drools/${BRANCH:main}/.ci/buildchain-config.yaml
+        flow-type: full-downstream
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+    - continue-on-error: true
+      if: ${{ always() }}
+      name: Surefire Report
+      uses: kiegroup/kie-ci/.ci/actions/surefire-report@main
+    strategy:
+      fail-fast: false
+      matrix:
+        java-version:
+        - 17
+        maven-version:
+        - 3.9.6
+        os:
+        - ubuntu-latest
+name: Full downstream build
+on:
+  repository_dispatch:
+    types: trigger-ga___pr-downstream-full.yml

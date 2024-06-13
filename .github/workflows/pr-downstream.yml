@@ -1,72 +1,80 @@
-name: Kogito Downstream
-
-on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths-ignore:
-      - 'LICENSE'
-      - '**/.gitignore'
-      - '**.md'
-      - '**.adoc'
-      - '*.txt'
-      - 'docsimg/**'
-      - '.ci/jenkins/**'
-
 jobs:
   kogito-downstream-build:
     concurrency:
-      group: pr-${{ matrix.job_name }}_${{ matrix.os }}_${{ matrix.java-version }}_${{ matrix.maven-version }}_${{ github.head_ref }}
       cancel-in-progress: true
-    timeout-minutes: 180
-    strategy:
-      matrix:
-        job_name: [ kogito-runtimes, kogito-apps, kogito-quarkus-examples, kogito-springboot-examples, serverless-workflow-examples ]
-        os: [ubuntu-latest]
-        java-version: [17]
-        maven-version: ['3.9.6']
-        include:
-          - job_name: kogito-runtimes
-            repository: kogito-runtimes
-          - job_name: kogito-apps
-            repository: kogito-apps
-            env_BUILD_MVN_OPTS: "-DskipUI"
-          - job_name: kogito-quarkus-examples
-            repository: kogito-examples
-            env_KOGITO_EXAMPLES_SUBFOLDER_POM: kogito-quarkus-examples/
-          - job_name: kogito-springboot-examples
-            repository: kogito-examples
-            env_KOGITO_EXAMPLES_SUBFOLDER_POM: kogito-springboot-examples/
-          - job_name: serverless-workflow-examples
-            repository: kogito-examples
-            env_KOGITO_EXAMPLES_SUBFOLDER_POM: serverless-workflow-examples/
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
-    name: ${{ matrix.job_name }} (${{ matrix.os }} / Java-${{ matrix.java-version }} / Maven-${{ matrix.maven-version }})
+      group: pr-${{ matrix.job_name }}_${{ matrix.os }}_${{ matrix.java-version }}_${{
+        matrix.maven-version }}_${{ github.head_ref }}
+    name: ${{ matrix.job_name }} (${{ matrix.os }} / Java-${{ matrix.java-version
+      }} / Maven-${{ matrix.maven-version }})
+    runs-on: self-hosted
     steps:
-      - name: Clean Disk Space
-        uses: kiegroup/kie-ci/.ci/actions/ubuntu-disk-space@main
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-      - name: Support long paths
-        if: ${{ matrix.os == 'windows-latest' }}
-        uses: kiegroup/kie-ci/.ci/actions/long-paths@main
-      - name: Java and Maven Setup
-        uses: kiegroup/kie-ci/.ci/actions/maven@main
-        with:
-          java-version: ${{ matrix.java-version }}
-          maven-version: ${{ matrix.maven-version }}
-          cache-key-prefix: ${{ runner.os }}-${{ matrix.java-version }}-maven${{ matrix.maven-version }}
-      - name: Build Chain
-        uses: kiegroup/kie-ci/.ci/actions/build-chain@main
-        with:
-          definition-file: https://raw.githubusercontent.com/${GROUP:kiegroup}/drools/${BRANCH:main}/.ci/buildchain-config.yaml
-          annotations-prefix: ${{ runner.os }}-${{ matrix.java-version }}/${{ matrix.maven-version }}
-          starting-project: kiegroup/${{ matrix.repository }}
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
-        env: 
-          BUILD_MVN_OPTS: ${{ matrix.env_BUILD_MVN_OPTS }}
-          KOGITO_EXAMPLES_SUBFOLDER_POM: ${{ matrix.env_KOGITO_EXAMPLES_SUBFOLDER_POM }}
-      - name: Surefire Report
-        uses: kiegroup/kie-ci/.ci/actions/surefire-report@main
-        if: ${{ always() }}
-        with:
-          report_paths: '**/*-reports/TEST-*.xml'
+    - continue-on-error: true
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      name: Clean Disk Space
+      uses: kiegroup/kie-ci/.ci/actions/ubuntu-disk-space@main
+    - continue-on-error: true
+      if: ${{ matrix.os == 'windows-latest' }}
+      name: Support long paths
+      uses: kiegroup/kie-ci/.ci/actions/long-paths@main
+    - continue-on-error: true
+      name: Java and Maven Setup
+      uses: kiegroup/kie-ci/.ci/actions/maven@main
+      with:
+        cache-key-prefix: ${{ runner.os }}-${{ matrix.java-version }}-maven${{ matrix.maven-version
+          }}
+        java-version: ${{ matrix.java-version }}
+        maven-version: ${{ matrix.maven-version }}
+    - continue-on-error: true
+      env:
+        BUILD_MVN_OPTS: ${{ matrix.env_BUILD_MVN_OPTS }}
+        KOGITO_EXAMPLES_SUBFOLDER_POM: ${{ matrix.env_KOGITO_EXAMPLES_SUBFOLDER_POM
+          }}
+      name: Build Chain
+      uses: kiegroup/kie-ci/.ci/actions/build-chain@main
+      with:
+        annotations-prefix: ${{ runner.os }}-${{ matrix.java-version }}/${{ matrix.maven-version
+          }}
+        definition-file: https://raw.githubusercontent.com/${GROUP:kiegroup}/drools/${BRANCH:main}/.ci/buildchain-config.yaml
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        starting-project: kiegroup/${{ matrix.repository }}
+    - continue-on-error: true
+      if: ${{ always() }}
+      name: Surefire Report
+      uses: kiegroup/kie-ci/.ci/actions/surefire-report@main
+      with:
+        report_paths: '**/*-reports/TEST-*.xml'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - job_name: kogito-runtimes
+          repository: kogito-runtimes
+        - env_BUILD_MVN_OPTS: -DskipUI
+          job_name: kogito-apps
+          repository: kogito-apps
+        - env_KOGITO_EXAMPLES_SUBFOLDER_POM: kogito-quarkus-examples/
+          job_name: kogito-quarkus-examples
+          repository: kogito-examples
+        - env_KOGITO_EXAMPLES_SUBFOLDER_POM: kogito-springboot-examples/
+          job_name: kogito-springboot-examples
+          repository: kogito-examples
+        - env_KOGITO_EXAMPLES_SUBFOLDER_POM: serverless-workflow-examples/
+          job_name: serverless-workflow-examples
+          repository: kogito-examples
+        java-version:
+        - 17
+        job_name:
+        - kogito-runtimes
+        - kogito-apps
+        - kogito-quarkus-examples
+        - kogito-springboot-examples
+        - serverless-workflow-examples
+        maven-version:
+        - 3.9.6
+        os:
+        - ubuntu-latest
+    timeout-minutes: 180
+name: Kogito Downstream
+on:
+  repository_dispatch:
+    types: trigger-ga___pr-downstream.yml

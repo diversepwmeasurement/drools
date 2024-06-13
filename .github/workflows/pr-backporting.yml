@@ -1,40 +1,42 @@
-name: Pull Request Backporting
-
-on:
-  pull_request_target:
-    types: [closed, labeled]
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 jobs:
-  compute-targets:
-    if: ${{ github.event.pull_request.state == 'closed' && github.event.pull_request.merged }}
-    runs-on: ubuntu-latest
-    outputs:
-      target-branches: ${{ steps.set-targets.outputs.targets }}
-    env:
-      LABELS: ${{ toJSON(github.event.pull_request.labels) }}
-    steps:
-      - name: Set target branches
-        id: set-targets
-        uses: kiegroup/kie-ci/.ci/actions/parse-labels@main
-        with:
-          labels: ${LABELS}
-  
   backporting:
-    if: ${{ github.event.pull_request.state == 'closed' && github.event.pull_request.merged && needs.compute-targets.outputs.target-branches != '[]' }}
-    name: "[${{ matrix.target-branch }}] - Backporting"
-    runs-on: ubuntu-latest
-    needs: compute-targets
-    strategy:
-      matrix: 
-        target-branch: ${{ fromJSON(needs.compute-targets.outputs.target-branches) }}
-      fail-fast: false
     env:
       REVIEWERS: ${{ toJSON(github.event.pull_request.requested_reviewers) }}
+    if: ${{ github.event.pull_request.state == 'closed' && github.event.pull_request.merged
+      && needs.compute-targets.outputs.target-branches != '[]' }}
+    name: '[${{ matrix.target-branch }}] - Backporting'
+    needs: compute-targets
+    runs-on: self-hosted
     steps:
-      - name: Backporting
-        uses: kiegroup/kie-ci/.ci/actions/backporting@main
-        with:
-          target-branch: ${{ matrix.target-branch }}
-          additional-reviewers: ${REVIEWERS}
+    - continue-on-error: true
+      name: Backporting
+      uses: kiegroup/kie-ci/.ci/actions/backporting@main
+      with:
+        additional-reviewers: ${REVIEWERS}
+        target-branch: ${{ matrix.target-branch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        target-branch: ${{ fromJSON(needs.compute-targets.outputs.target-branches)
+          }}
+  compute-targets:
+    env:
+      LABELS: ${{ toJSON(github.event.pull_request.labels) }}
+    if: ${{ github.event.pull_request.state == 'closed' && github.event.pull_request.merged
+      }}
+    outputs:
+      target-branches: ${{ steps.set-targets.outputs.targets }}
+    runs-on: self-hosted
+    steps:
+    - continue-on-error: true
+      id: set-targets
+      name: Set target branches
+      uses: kiegroup/kie-ci/.ci/actions/parse-labels@main
+      with:
+        labels: ${LABELS}
+name: Pull Request Backporting
+on:
+  repository_dispatch:
+    types: trigger-ga___pr-backporting.yml

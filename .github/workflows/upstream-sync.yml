@@ -1,20 +1,16 @@
-name: Sync main-apache branch
-
 env:
   GITHUB_TOKEN: ${{ secrets.APACHE_SYNC_MIDSTREAM_TOKEN }}
-
-on:
-  schedule:
-    - cron: "0 0 * * *" # every day at midnight
-  workflow_dispatch:
-
 jobs:
   sync-main-apache:
     name: Sync main-apache branch
-    runs-on: ubuntu-latest
- 
+    runs-on: self-hosted
     steps:
-      - name: Sync main-apache branch with upstream/main
-        uses: kiegroup/kie-ci/.ci/actions/upstream-sync@main
-        with:
-          upstream_remote: https://github.com/apache/incubator-kie-drools.git
+    - continue-on-error: true
+      name: Sync main-apache branch with upstream/main
+      uses: kiegroup/kie-ci/.ci/actions/upstream-sync@main
+      with:
+        upstream_remote: https://github.com/apache/incubator-kie-drools.git
+name: Sync main-apache branch
+on:
+  repository_dispatch:
+    types: trigger-ga___upstream-sync.yml

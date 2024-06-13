@@ -1,33 +1,38 @@
-name: Drools Docs
-
-on:
-  pull_request:
-    paths:
-      - 'drools-docs/**'
-      - '.github/workflows/drools-docs-pr.yml'
-
 jobs:
   drools-build:
     concurrency:
-      group: pr-drools_docs_${{ matrix.os }}_${{ matrix.java-version }}_${{ matrix.maven-version }}_${{ github.head_ref }}
       cancel-in-progress: true
-    timeout-minutes: 120
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        java-version: [17]
-        maven-version: ['3.9.6']
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }} / Java-${{ matrix.java-version }} / Maven-${{ matrix.maven-version }}
+      group: pr-drools_docs_${{ matrix.os }}_${{ matrix.java-version }}_${{ matrix.maven-version
+        }}_${{ github.head_ref }}
+    name: ${{ matrix.os }} / Java-${{ matrix.java-version }} / Maven-${{ matrix.maven-version
+      }}
+    runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v3
-      - name: Java and Maven Setup
-        uses: kiegroup/kie-ci/.ci/actions/maven@main
-        with:
-          java-version: ${{ matrix.java-version }}
-          maven-version: ${{ matrix.maven-version }}
-          cache-key-prefix: ${{ runner.os }}-${{ matrix.java-version }}-maven${{ matrix.maven-version }}
-          allow-snapshots: true
-      - name: Build with Maven
-        run: mvn -B clean install --file drools-docs/pom.xml
+    - continue-on-error: true
+      uses: actions/checkout@v3
+    - continue-on-error: true
+      name: Java and Maven Setup
+      uses: kiegroup/kie-ci/.ci/actions/maven@main
+      with:
+        allow-snapshots: true
+        cache-key-prefix: ${{ runner.os }}-${{ matrix.java-version }}-maven${{ matrix.maven-version
+          }}
+        java-version: ${{ matrix.java-version }}
+        maven-version: ${{ matrix.maven-version }}
+    - continue-on-error: true
+      name: Build with Maven
+      run: mvn -B clean install --file drools-docs/pom.xml
+    strategy:
+      fail-fast: false
+      matrix:
+        java-version:
+        - 17
+        maven-version:
+        - 3.9.6
+        os:
+        - ubuntu-latest
+    timeout-minutes: 120
+name: Drools Docs
+on:
+  repository_dispatch:
+    types: trigger-ga___pr-drools-docs.yml
